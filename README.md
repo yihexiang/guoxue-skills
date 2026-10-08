@@ -15,9 +15,14 @@
 | [`bazi-paipan`](skills/bazi-paipan/) | 八字四柱排盘：干支/藏干/十神/纳音/空亡/神煞/起运大运 | 无 | 41 项全绿 |
 | [`geju-yunshi`](skills/geju-yunshi/) | 已排好的盘怎么读：格局、日主强弱、大运描述性解读 | `bazi-paipan` | — |
 | [`quming-xue`](skills/quming-xue/) | 依八字喜用神取名/体检：五格/三才/生肖/平仄 | `bazi-paipan`（取八字）、`geju-yunshi`（取喜用） | 15 项全绿 |
+| [`zhouyi-yili`](skills/zhouyi-yili/) | 周易义理：观象—析爻—落行动的处境分析（**不做预测与算命**） | 无 | 47 项全绿 |
 
 > `geju-yunshi` 依赖 `bazi-paipan` 的排盘引擎 `scripts/paipan.py`。
 > 用 `./install.sh --skill geju-yunshi` 时安装器会**自动一并安装** `bazi-paipan`。
+>
+> ⚠️ `zhouyi-yili` **与上面三个不是一路**：它不用生辰、不做预测断言、不给吉凶定论。
+> 它做的是"当下处境的结构分析 + 行动建议"，源自《周易》六十四卦结构与《易传》十翼的**义理**传统。
+> 想让它算运势、算彩票、断疾病，它会拒答——这是设计，不是缺陷。
 
 ---
 
@@ -96,10 +101,18 @@ python3 <skills>/quming-xue/scripts/wuge.py 李 昱坤 \
   --strokes 7,9,8 --zodiac 马 --xiyong 火,土 --tones 3,4,1
 ```
 
+**周易析卦**（多变爻会一次给出本卦与之卦两张大象辞，供"贞悔相参"对读）
+```bash
+python3 <skills>/zhouyi-yili/scripts/zhouyi.py 蒙 --moving 1
+python3 <skills>/zhouyi-yili/scripts/zhouyi.py 既濟 --moving 1,3
+python3 <skills>/zhouyi-yili/scripts/zhouyi.py --cast --seed 7   # 金钱卦起卦，同 seed 可复现
+```
+
 **跑自检**（安装是否正确、引擎是否可用的最硬证据）
 ```bash
 python3 <skills>/bazi-paipan/tests/test_engine.py    # 41 项
 python3 <skills>/quming-xue/tests/test_engine.py     # 15 项
+python3 <skills>/zhouyi-yili/tests/test_engine.py    # 47 项
 ```
 
 ---
