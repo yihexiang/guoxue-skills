@@ -31,11 +31,16 @@ cd guoxue-skills
 ./install.sh                 # 自动检测本机已装的 Agent 并安装
 ```
 
-一行版（免 git 操作，脚本自行 clone）：
+一行版（脚本会自行获取仓库再安装）：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yihexiang/guoxue-skills/main/install.sh | bash
 ```
+
+> 管道模式下安装器先尝试 `git clone`，失败则**自动降级为下载 tarball**
+> （实测某些代理环境会拦 git 的 https 连接，但 curl 正常）。
+> 因此即使本机没装 git 也能用。想装到指定位置：`curl -fsSL <上面的地址> | bash -s -- --target <目录>`；
+> 换仓库/分支可用环境变量 `REPO` 与 `BRANCH` 覆盖。
 
 ### 方式 2 · 指定目标
 

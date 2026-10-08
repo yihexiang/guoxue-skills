@@ -22,21 +22,53 @@
 set -uo pipefail
 
 REPO="${REPO:-https://github.com/yihexiang/guoxue-skills}"
+BRANCH="${BRANCH:-main}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo .)"
 SKILLS_SRC="$SCRIPT_DIR/skills"
 
-# 若 skills/ 不在脚本旁边（说明是 curl | bash 管道模式），先 clone 到临时目录
+# 若 skills/ 不在脚本旁边（说明是 curl | bash 管道模式），先把仓库取到临时目录。
+# 两种取法都要有：某些代理环境下 git 走 https 会被拦（实测 CONNECT tunnel 502），
+# 而同一台机器的 curl 却能正常下载 —— 所以 git 失败时自动降级为 tarball。
 if [ ! -d "$SKILLS_SRC" ]; then
-  if ! command -v git >/dev/null 2>&1; then
-    echo "✗ 未找到本地 skills/ 目录，且本机没有 git。请先手动下载仓库再运行 install.sh。" >&2
+  have_curl=0; command -v curl >/dev/null 2>&1 && have_curl=1
+  have_tar=0;  command -v tar  >/dev/null 2>&1 && have_tar=1
+  have_git=0;  command -v git  >/dev/null 2>&1 && have_git=1
+  if [ "$have_git" = 0 ] && { [ "$have_curl" = 0 ] || [ "$have_tar" = 0 ]; }; then
+    echo "✗ 未找到本地 skills/ 目录，且本机既没有 git 也没有 curl+tar。" >&2
+    echo "  请先手动下载仓库（https://github.com/yihexiang/guoxue-skills）再运行 install.sh。" >&2
     exit 1
   fi
   TMPROOT="$(mktemp -d)"
-  echo "› 管道模式：克隆 $REPO 到 $TMPROOT"
-  git clone --depth 1 "$REPO" "$TMPROOT/guoxue-skills" >/dev/null 2>&1 || {
-    echo "✗ 克隆失败：$REPO"; rm -rf "$TMPROOT"; exit 1; }
-  SKILLS_SRC="$TMPROOT/guoxue-skills/skills"
   trap 'rm -rf "$TMPROOT"' EXIT
+  echo "› 管道模式：获取 $REPO 到 $TMPROOT"
+
+  got=0
+  # 方式 1：git（能保留 .git，便于日后更新）
+  if [ "$have_git" = 1 ]; then
+    if git clone --depth 1 "$REPO" "$TMPROOT/guoxue-skills" >/dev/null 2>&1; then
+      SKILLS_SRC="$TMPROOT/guoxue-skills/skills"; got=1
+    else
+      echo "  · git clone 失败（代理/网络限制常见），改用 tarball 下载"
+    fi
+  fi
+  # 方式 2：tarball（不依赖 git）
+  if [ "$got" = 0 ]; then
+    repo_path="${REPO#https://github.com/}"; repo_path="${repo_path%.git}"
+    tar_url="https://codeload.github.com/${repo_path}/tar.gz/refs/heads/${BRANCH}"
+    if [ "$have_curl" = 1 ] && [ "$have_tar" = 1 ] \
+       && curl -fsSL --retry 2 --max-time 60 "$tar_url" 2>/dev/null \
+              | tar -xz -C "$TMPROOT" 2>/dev/null; then
+      # tarball 解出的顶层目录名随 ref 而定（如 guoxue-skills-main），按布局自适应
+      for d in "$TMPROOT"/*/; do
+        if [ -d "${d}skills" ]; then SKILLS_SRC="${d}skills"; got=1; break; fi
+      done
+    fi
+  fi
+  if [ "$got" = 0 ]; then
+    echo "✗ 获取仓库失败：$REPO" >&2
+    echo "  请检查网络/代理，或手动下载后运行本地的 install.sh。" >&2
+    exit 1
+  fi
 fi
 
 KNOWN_AGENTS="claude workbuddy codex cursor gemini opencode windsurf"
