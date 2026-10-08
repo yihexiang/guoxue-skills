@@ -1,0 +1,12 @@
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+envs/
+.snapshot*/
+*.bak-20*
+node_modules/
+.idea/
+.vscode/
