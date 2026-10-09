@@ -1,0 +1,22 @@
+{
+  "schema": "rulai-distill/fidelity/v1",
+  "subject": "bazi-paipan",
+  "eval_mode": "dual-agent",
+  "answerer": "answerer-subagent-bazi-1",
+  "graders": [
+    "grader-1",
+    "grader-2"
+  ],
+  "cross_grader_gap": 1.0,
+  "dimensions": {
+    "consistency": 30,
+    "style": 18,
+    "edge_honesty": 20,
+    "source_transparency": 11,
+    "structure": 14
+  },
+  "total": 93,
+  "grade": "A",
+  "blocking_issues": [],
+  "verdict": "pass"
+}

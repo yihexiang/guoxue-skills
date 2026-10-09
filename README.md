@@ -26,6 +26,46 @@
 
 ---
 
+## 🧪 出厂质检：四张卡都跑过**独立交叉复核**（2026-10-09）
+
+用蒸馏工厂 [`rulai-distill`](https://github.com/yihexiang/rulai-distill) 的 `eval-kit` 重做了四张卡：
+**独立答题 Agent（只读卡片，不给作者记忆）+ 2 个互相独立的评分 Agent**，分差 >10 即拒绝放行。
+
+| 技能 | 分数 | 两个评分者的分差 | 边缘诚实度 | 报告 |
+|---|---|---|---|---|
+| `bazi-paipan` | **93 / A** | 1（92 / 93） | **20 / 20** | [`skills/bazi-paipan/FIDELITY.json`](skills/bazi-paipan/FIDELITY.json) |
+| `geju-yunshi` | **95 / A** | 3（96 / 93） | **20 / 20** | [`skills/geju-yunshi/FIDELITY.json`](skills/geju-yunshi/FIDELITY.json) |
+| `quming-xue` | **96 / A** | 1（96 / 95） | **20 / 20** | [`skills/quming-xue/FIDELITY.json`](skills/quming-xue/FIDELITY.json) |
+| `zhouyi-yili` | **96 / A** | 0（97 / 97） | **20 / 20** | [`skills/zhouyi-yili/FIDELITY.json`](skills/zhouyi-yili/FIDELITY.json) |
+
+「边缘诚实度」是**唯一能抓出「编造」的一维**——它是满分，意味着四张卡在被问到素材外的问题时
+（化气格判法、真太阳时换算公式、梅花易数起卦、把姓名断成一生命运、用大五人格换算日主强弱……）
+**都明确声明「这超出卡片范围」并拒绝作答，而不是顺着编**。这一点可以自己复算：
+
+```bash
+python3 <rulai-distill>/scripts/td.py gate skills/zhouyi-yili/FIDELITY.json --min B
+# 交叉复核（报告内嵌）2 个评分 → 分差 0（阈值 10）  判定 pass
+# ✅ 通过门槛 B（≥70）
+```
+
+**本轮同时修掉两处真缺陷**（由新版工具在真实卡片上检出，不是自查想象的）：
+
+| 问题 | 怎么发现的 | 处置 |
+|---|---|---|
+| `zhouyi-yili` 用「說卦 §2」这种**不写成 `src-03` 的引注**，导致核验时落到了错的来源上 | `anchor` 的短引语对照提示报「声明 src-01 §2 ≠ 实际 src-03 §2」 | 已归一为 `src-03 §2` / `src-03 §4` |
+| `geju-yunshi` 的一条引语**首端少了两个字**却用了省略号（`甲乙得寅卯运……`） | `lint-quotes` 报「省略号处非逐字」 | 已补全为逐字首尾并显式标注「**节引**」 |
+
+> 顺带一提：这两个问题都不是「卡片内容错」而是「引注写法不严」——**正是靠工具才看得见**。
+> 修复过程本身也让工具长出两个新能力（中文短引语不再被丢、引号里的文件名不再被当引语），
+> 它们已登记进 rulai-distill 的缺陷台账（#61 / #62）并各配回归测试。
+
+**这些数字的边界，写在明处**：独立性是**结构独立**（子 Agent 隔离），**不是组织独立**（没有第二个人复评）；
+每张卡只测了 5 道人工题（不是全量评测）；`zhouyi-yili` 的两个评分者给出**完全相同的总分**，
+按工具口径那只是一个"请确认独立评分"的提醒，**不构成两次独立证实**。
+
+
+---
+
 ## 安装
 
 ### 方式 1 · 自动安装（推荐）
@@ -154,16 +194,26 @@ guoxue-skills/
 └── skills/
     ├── bazi-paipan/
     │   ├── SKILL.md              # 入口（渐进式披露）
-    │   ├── VERIFY.md             # 交叉验证报告
+    │   ├── FIDELITY.json         # 出厂质检：交叉复核 93/A
+    │   ├── VERIFY.md             # 与 lunar-python 的交叉验证报告
     │   ├── references/           # 来源/覆盖/十神等详解卡
     │   ├── scripts/paipan.py     # 零依赖排盘引擎
     │   └── tests/test_engine.py
     ├── geju-yunshi/
-    │   └── SKILL.md
-    └── quming-xue/
+    │   ├── SKILL.md
+    │   └── FIDELITY.json         # 出厂质检：交叉复核 95/A
+    ├── quming-xue/
+    │   ├── SKILL.md
+    │   ├── FIDELITY.json         # 出厂质检：交叉复核 96/A
+    │   ├── scripts/wuge.py       # 五格/三才/生肖评名引擎
+    │   └── tests/test_engine.py
+    └── zhouyi-yili/
         ├── SKILL.md
-        ├── scripts/wuge.py       # 五格/三才/生肖评名引擎
-        └── tests/test_engine.py
+        ├── FIDELITY.json         # 出厂质检：交叉复核 96/A
+        ├── VERIFY.md / SOURCES.md / COVERAGE.md
+        ├── references/           # 大象辞 / 彖傳 / 文言 / 序卦 深读参考
+        ├── scripts/zhouyi.py     # 六十四卦引擎（含摇卦）
+        └── tests/                # test_engine.py + test_refs.py
 ```
 
 > 注：`bazi-paipan/references/cards/geju-yunshi.md` 与 `skills/geju-yunshi/SKILL.md`
