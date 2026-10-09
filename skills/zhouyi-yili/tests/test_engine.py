@@ -15,6 +15,8 @@
   T10 边界：未知卦名抛错；大象查不到要明说而非臆造
 """
 import sys
+import io
+import contextlib
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
@@ -22,12 +24,17 @@ sys.path.insert(0, str(_HERE.parent / "scripts"))
 import zhouyi as Z  # noqa: E402
 
 FAILED = []
+_OK = 0
+_BAD = 0
 
 
 def check(name, cond, detail=""):
+    global _OK, _BAD
     if cond:
+        _OK += 1
         print("  ✓", name)
     else:
+        _BAD += 1
         print("  ✗", name, "→", detail)
         FAILED.append(name)
 
@@ -231,11 +238,53 @@ def t13():
     check(f"T13c references 卦名条目数 == 64（实测 {len(rows)}）", len(rows) == 64, len(rows))
 
 
-for fn in (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13):
+def t14():
+    """电脑摇卦：--cast 应一次给出本卦，并直接附上完整卦象解读（不必再跑第二条命令）。
+
+    为什么必须有：用户要的是「摇卦→解读」一条龙，若 --cast 只给裸卦名、还要调用方
+    自己再拼一次 analyze，链路就断了。本测试把「摇卦即出解读」钉死。
+    """
+    # 14a 随机摇卦：无 seed 也要回传一个实际 seed，且本卦非空、是六十四卦之一
+    r = Z.cast(None)
+    check("T14a 随机摇卦回传了实际 seed（非空）",
+          isinstance(r["seed"], int) and r["seed"] > 0, r.get("seed"))
+    check("T14b 随机摇卦本卦在六十四卦内",
+          r["本卦"] in Z.BY_NAME, r.get("本卦"))
+    check("T14c 随机摇卦每爻标签都在 6/7/8/9 四种之内（老阴少阳少阴老阳）",
+          all(w in Z.COIN_NAMES.values() for w in r["每爻"]), r.get("每爻"))
+    # 14d 同 seed 完全可复现
+    same = Z.cast(42)
+    check("T14d 同 seed 复现本卦一致", same["本卦"] == Z.cast(42)["本卦"], same["本卦"])
+    # 14e --cast 经 main() 一次产出「本卦行」+「卦象解读块」
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = Z.main(["--cast", "--seed", "42"])
+    out = buf.getvalue()
+    check("T14e --cast 退出码为 0", rc == 0, rc)
+    check("T14e1 --cast 文本含「本卦：」行",
+          "本卦：" in out, out[:60].replace("\n", " "))
+    check("T14e2 --cast 文本含「卦象解读（结构）」分隔",
+          "卦象解读（结构）" in out, "")
+    check("T14e3 --cast 文本含「大象：」行（即已跑 analyze）",
+          "大象：" in out, "")
+    # 14f JSON 合并输出含 解读 键
+    buf2 = io.StringIO()
+    with contextlib.redirect_stdout(buf2):
+        Z.main(["--cast", "--seed", "7", "--json"])
+    import json as _json
+    try:
+        obj = _json.loads(buf2.getvalue())
+        ok = "解读" in obj and obj["本卦"] == obj["解读"]["卦名"]
+    except Exception as e:  # noqa: BLE001
+        ok, obj = False, str(e)
+    check("T14f --cast --json 合并输出含 解读 且与本卦同名", ok, obj)
+
+
+for fn in (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14):
     fn()
 
 print()
 if FAILED:
     print(f"❌ {len(FAILED)} 项未通过：" + "、".join(FAILED))
     sys.exit(1)
-print("ALL PASS")
+print(f"ALL PASS — {_OK} 项通过，{_BAD} 项失败")

@@ -15,7 +15,7 @@
 | [`bazi-paipan`](skills/bazi-paipan/) | 八字四柱排盘：干支/藏干/十神/纳音/空亡/神煞/起运大运 | 无 | 41 项全绿 |
 | [`geju-yunshi`](skills/geju-yunshi/) | 已排好的盘怎么读：格局、日主强弱、大运描述性解读 | `bazi-paipan` | — |
 | [`quming-xue`](skills/quming-xue/) | 依八字喜用神取名/体检：五格/三才/生肖/平仄 | `bazi-paipan`（取八字）、`geju-yunshi`（取喜用） | 15 项全绿 |
-| [`zhouyi-yili`](skills/zhouyi-yili/) | 周易义理：观象—析爻—落行动的处境分析（**不做预测与算命**） | 无 | 89 项全绿（引擎 47 + 参考 42） |
+| [`zhouyi-yili`](skills/zhouyi-yili/) | 周易义理：观象—析爻—落行动的处境分析（**不做预测与算命**） | 无 | 97 项全绿（引擎 56 + 参考 41） |
 
 > `geju-yunshi` 依赖 `bazi-paipan` 的排盘引擎 `scripts/paipan.py`。
 > 用 `./install.sh --skill geju-yunshi` 时安装器会**自动一并安装** `bazi-paipan`。
@@ -106,6 +106,7 @@ python3 <skills>/quming-xue/scripts/wuge.py 李 昱坤 \
 python3 <skills>/zhouyi-yili/scripts/zhouyi.py 蒙 --moving 1
 python3 <skills>/zhouyi-yili/scripts/zhouyi.py 既濟 --moving 1,3
 python3 <skills>/zhouyi-yili/scripts/zhouyi.py --cast --seed 7   # 金钱卦起卦，同 seed 可复现
+python3 <skills>/zhouyi-yili/scripts/zhouyi.py --cast             # 电脑随机摇卦，一次出完整卦象解读
 ```
 
 **深读三命令**（十翼原文先例，引擎实测交叉验证）
@@ -119,8 +120,8 @@ python3 <skills>/zhouyi-yili/scripts/zhouyi.py 乾 --wenyan --line 上九   # �
 ```bash
 python3 <skills>/bazi-paipan/tests/test_engine.py    # 41 项
 python3 <skills>/quming-xue/tests/test_engine.py     # 15 项
-python3 <skills>/zhouyi-yili/tests/test_engine.py    # 47 项
-python3 <skills>/zhouyi-yili/tests/test_refs.py      # 42 项（三块深读参考的交叉验证）
+python3 <skills>/zhouyi-yili/tests/test_engine.py    # 56 项
+python3 <skills>/zhouyi-yili/tests/test_refs.py      # 41 项（三块深读参考的交叉验证）
 ```
 
 ---

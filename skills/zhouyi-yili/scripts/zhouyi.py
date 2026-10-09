@@ -15,7 +15,8 @@
 零依赖、不联网。命令行：
     python3 zhouyi.py 蒙
     python3 zhouyi.py 蒙 --moving 1,3
-    python3 zhouyi.py --cast --seed 42
+    python3 zhouyi.py --cast            # 电脑摇卦（随机），一次给全卦象解读
+    python3 zhouyi.py --cast --seed 42  # 同一卦可复现
 """
 from __future__ import annotations
 
@@ -349,8 +350,12 @@ COIN_NAMES = {6: "老陰（變）", 7: "少陽", 8: "少陰", 9: "老陽（變�
 def cast(seed: int | None = None) -> dict:
     """金钱卦起卦：三枚硬币掷六次，自下而上成卦。
 
-    定 seed 后完全可复现，便于核对；不传 seed 则用随机。
+    不传 seed 时用系统随机源（真正的「电脑摇卦」）；传入 seed 则完全可复现，
+    便于核对或回头重看同一卦。无论哪种，都把实际使用的 seed 一并返回，
+    这样即使是随机摇出的卦也能被原样复现。
     """
+    if seed is None:
+        seed = random.randrange(1, 2**31)
     rng = random.Random(seed)
     rows = []
     for _ in range(6):
@@ -366,6 +371,28 @@ def cast(seed: int | None = None) -> dict:
             [opposite(v) if i in moving else v for i, v in enumerate(base, start=1)]
         ) if name else None,
     }
+
+
+def _print_analysis(res: dict) -> None:
+    """把 analyze() 的结构结果打印成文本（命名卦路径与摇卦路径共用）。"""
+    print(f"══ {res['卦名']}（第{res['卦序']}卦）· {res['自然象']} ══")
+    print(f"上卦 {res['上卦']}（{res['上卦象']}·{res['上卦德']}）／"
+          f"下卦 {res['下卦']}（{res['下卦象']}·{res['下卦德']}）")
+    print(f"六爻（自上而下）：{res['六爻']}")
+    for y in res["爻詳"]:
+        flag = " ★變" if y["變爻"] else ""
+        print(f"  {y['位']}爻 {y['爻']}：當位={y['當位']} 得中={y['得中']} "
+              f"應({y['應位']}爻)={y['有應']}"
+              + (f" {y['相鄰']}" if y["相鄰"] else "") + flag)
+    pairs = sum(1 for i in (1, 2, 3)
+                if next(y for y in res["爻詳"] if y["位"] == i)["有應"])
+    print(f"當位 {res['當位數']}/6　有應 {pairs}/3 組")
+    print(f"大象：{res['大象']}")
+    if res["之卦"]:
+        print(f"之卦：{res['之卦']}")
+        # 多变爻「贞悔相参」要的就是这两张大象辞对着读，一次给全，不逼用户再跑一次
+        if res["之卦大象"]:
+            print(f"之卦大象：{res['之卦大象']}")
 
 
 # ---------------------------------------------------------------- CLI
@@ -384,13 +411,20 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.cast or not a.name:
         r = cast(a.seed)
+        # 摇卦得到本卦/变爻/之卦后，直接跑结构分析，一次给全「卦象解读」，
+        # 不必再让调用方跑第二条命令。
+        res = analyze(r["本卦"], r["變爻"])
         if a.json:
-            print(json.dumps(r, ensure_ascii=False, indent=2))
+            print(json.dumps({**r, "解读": res}, ensure_ascii=False, indent=2))
             return 0
-        print("金钱卦起卦" + (f"（seed={a.seed}）" if a.seed is not None else ""))
+        note = (f"（seed={a.seed}，可复现）" if a.seed is not None
+                else f"（电脑随机，种子={r['seed']}；要重看同一卦加 --seed {r['seed']}）")
+        print("金钱卦起卦 · 电脑摇卦" + note)
         for i, w in enumerate(r["每爻"], 1):
             print(f"  第{i}爻：{w}")
         print(f"本卦：{r['本卦']}   變爻：{r['變爻'] or '無'}   之卦：{r['之卦']}")
+        print("──── 卦象解读（结构）────")
+        _print_analysis(res)
         return 0
 
     try:
@@ -456,24 +490,7 @@ def main(argv: list[str] | None = None) -> int:
     if a.json:
         print(json.dumps(res, ensure_ascii=False, indent=2))
         return 0
-    print(f"══ {res['卦名']}（第{res['卦序']}卦）· {res['自然象']} ══")
-    print(f"上卦 {res['上卦']}（{res['上卦象']}·{res['上卦德']}）／"
-          f"下卦 {res['下卦']}（{res['下卦象']}·{res['下卦德']}）")
-    print(f"六爻（自上而下）：{res['六爻']}")
-    for y in res["爻詳"]:
-        flag = " ★變" if y["變爻"] else ""
-        print(f"  {y['位']}爻 {y['爻']}：當位={y['當位']} 得中={y['得中']} "
-              f"應({y['應位']}爻)={y['有應']}"
-              + (f" {y['相鄰']}" if y["相鄰"] else "") + flag)
-    pairs = sum(1 for i in (1, 2, 3)
-                if next(y for y in res["爻詳"] if y["位"] == i)["有應"])
-    print(f"當位 {res['當位數']}/6　有應 {pairs}/3 組")
-    print(f"大象：{res['大象']}")
-    if res["之卦"]:
-        print(f"之卦：{res['之卦']}")
-        # 多变爻「贞悔相参」要的就是这两张大象辞对着读，一次给全，不逼用户再跑一次
-        if res["之卦大象"]:
-            print(f"之卦大象：{res['之卦大象']}")
+    _print_analysis(res)
     return 0
 
 

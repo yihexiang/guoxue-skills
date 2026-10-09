@@ -22,9 +22,9 @@ $ td.py anchor bundle/skills/zhouyi-yili.md --corpus corpus/anchored/src-*.md
 
 ```
 $ python3 tests/test_engine.py
-47 项 ✓ · ALL PASS
+56 项 ✓ · ALL PASS
 $ python3 tests/test_refs.py
-42 项 ✓ · ALL PASS
+41 项 ✓ · ALL PASS
 ```
 
 test_engine 分組：T1 卦序 vs 大象傳原文 / T2 综卦不变量（28 对）/ T2b 八宫正覆相同 / T3 错卦四组 /
