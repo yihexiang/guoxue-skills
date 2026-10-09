@@ -23,13 +23,18 @@ $ td.py anchor bundle/skills/zhouyi-yili.md --corpus corpus/anchored/src-*.md
 ```
 $ python3 tests/test_engine.py
 47 项 ✓ · ALL PASS
+$ python3 tests/test_refs.py
+42 项 ✓ · ALL PASS
 ```
 
-分組：T1 卦序 vs 大象傳原文 / T2 综卦不变量（28 对）/ T2b 八宫正覆相同 / T3 错卦四组 /
+test_engine 分組：T1 卦序 vs 大象傳原文 / T2 综卦不变量（28 对）/ T2b 八宫正覆相同 / T3 错卦四组 /
 T4 卦德卦象 / T5 既濟全当位·未濟全失位 / T6 变爻之卦 / T7 大象辞全取到 /
 T8 起卦可复现 / T9 简体别名 / T10 边界不臆造 /
-**T11 承乘判据（2026-10-09 新增）** / **T12 多变爻 + 之卦大象（新增）** /
-**T13 references 与引擎同源（新增）**。
+**T11 承乘判据** / **T12 多变爻 + 之卦大象** / **T13 references 与引擎同源**。
+test_refs（2026-10-09 新增，三块深读参考的交叉验证）分組：
+R1 序卦链条 61 链接全齐 / R2 彖傳 64 卦实例对得上引擎实测 / R3 文言逐爻（仅乾坤）/
+R4 彖辞原文 ↔ 引擎实测硬先例（既濟 6/6 当位、未濟 0/6 且全应等钉死）/
+R5 三命令端到端（--chain / --tuan / --wenyan）+ 简体归一。
 
 ## 4 · 语料完整性自检（不随技能发布）
 
@@ -41,21 +46,23 @@ C3 术语當位/得中/中正/乘剛/應/剛柔/盈不可久 皆有出处
 ALL PASS
 ```
 
-## 5 · ⚠️ 一条**不适用**的命令（不得据其"PASS"下结论）
+## 5 · ⚠️ 一条**已加空集守卫**的命令（空集不再假绿）
 
 ```
 $ td.py verify-quotes bundle/skills/zhouyi-yili.md corpus/anchored/src-01-xici-shang.md
 引用 0 个（条目引用 0 + 时间戳 0）
 逐字引语核验 0 条 → 命中 0 条
-✅ 全部引语在语料中核到
+⚠️ 未检测到可核验的引语（卡片未使用【第N条】或时间戳定位标记）——本工具未核验任何引语，结论为 N/A，不是 PASS
+⚠️ 纯 src-XX §N 锚定的卡片请改用 td.py anchor <card> <corpus> 做段号核验
 ```
 
-**这是假绿，不能采信。** 原因：`verify-quotes` 按 `【第N条 | 日期 | id】` 标记抽取引用，
-而本卡的定位标记是 `src-XX §N`，它一条也抽不到，于是 0 条引语 → 0 条失败 → 打印 PASS。
-**空集判 PASS** 是本项目的明令禁止项。
+此前这条会打印 `✅ 全部引语在语料中核到`——**对空集的假绿**：`verify-quotes` 按 `【第N条 | 日期 | id】` 标记抽引用，本卡用 `src-XX §N` 故抽到 0 条 → 0 条失败 → 误判 PASS。
+**空集判 PASS** 是本项目明令禁止项，已于 2026-10-09 在 `verify-quotes` 加 vacuous 守卫：
+引用数为 0 时 `verdict` 记为 `vacuous`，命令层显式报 **N/A** 而非通过，并提示改用 `anchor`。
+回归测试 `t_verify_quotes_vacuous_guard`（rulai-distill e2e 第 74 项）钉死该行为。
 
-- 本卡的引语核验**由 `anchor` 承担**（它有 vacuous 守卫，且实测 8 条非空集）。
-- 该缺陷已上报，未在本轮修改 `verify-quotes`（既有决策：停止向该命令堆规则）。
+- 本卡的引语核验**仍由 `anchor` 承担**（它有 vacuous 守卫，且实测 8 条非空集）。
+- 守卫加在工具侧而非卡片侧——卡片本身未改措辞。
 
 ## 6 · 覆盖率审计工具在本卡的适用性
 

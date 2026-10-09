@@ -73,6 +73,8 @@ ALIAS = {
     "观": "觀", "贲": "賁", "剥": "剝", "复": "復", "颐": "頤", "过": "過",
     "离": "離", "遁": "遯", "晋": "晉", "损": "損", "归妹": "歸妹", "丰": "豐",
     "兑": "兌", "涣": "渙", "节": "節", "济": "濟", "壮": "壯", "恆": "恒",
+    # 「無妄」是本卦最常见的写法（繁体底稿即作「无妄」，但多数据源作「無妄」）
+    "無": "无",
 }
 
 BY_NAME = {n: (n, up, low) for n, up, low in HEXAGRAMS}
@@ -244,6 +246,102 @@ def daxiang(name: str) -> str:
     return "（未找到大象辞）"
 
 
+# ---------------------------------------------------------------- 三份 references 查询
+# 序卦相承 / 彖傳实例 / 文言逐爻。三份文件均由 tools/build_refs.py 从语料生成，
+# 此处只做查表，**查不到就明说，绝不臆造**——与 daxiang() 同一纪律。
+def _ref(name: str) -> Path | None:
+    for base in (Path(__file__).resolve().parent.parent / "references",
+                 Path(__file__).resolve().parent.parent.parent / "dist"
+                 / "zhouyi-yili" / "references"):
+        p = base / name
+        if p.exists():
+            return p
+    return None
+
+
+def _load_rows(fname: str) -> list[list[str]] | None:
+    """按「｜」切分的数据行；注释与标题行跳过。文件不存在返回 None（区分于空表）。"""
+    p = _ref(fname)
+    if p is None:
+        return None
+    rows = []
+    for line in p.read_text(encoding="utf-8").splitlines():
+        s = line.strip()
+        if not s or s.startswith(("#", ">", "<!--")):
+            continue
+        if "｜" not in s:
+            continue
+        rows.append([c.strip() for c in s.split("｜")])
+    return rows
+
+
+def chain(name: str) -> dict:
+    """序卦相承：这一卦从哪来、往哪去、序卦给的理由是什么。
+
+    《序卦傳》讲的就是「卦与卦之间为什么这么排」——每一卦都是上一卦的必然后果。
+    解完一卦被追问「下一步呢」时查这里，不要凭印象编因果。
+    """
+    n = norm_name(name)
+    rows = _load_rows("xugua-chain.md")
+    if rows is None:
+        return {"卦名": n, "承自": None, "承至": None, "錯誤": "未找到 references/xugua-chain.md"}
+    for r in rows:
+        if len(r) >= 6 and norm_name(r[0]) == n:
+            return {
+                "卦名": n, "卦序": ORDER.get(n),
+                "承自": r[2].replace("承自 ", "").strip(),
+                "承至": r[3].replace("承至 ", "").strip(),
+                "何以承自": r[4],
+                "何以承至": r[5],
+            }
+    return {"卦名": n, "承自": None, "承至": None, "錯誤": f"序卦链条中无此卦：{name}"}
+
+
+def tuan(name: str) -> dict:
+    """彖傳实例：该卦彖辞原文 + 术语标注 + 引擎实测，供「十翼自己怎么解释这套结构」。
+
+    价值在于**对照**：左边是《彖傳》的判断，右边是引擎算出的结构事实。
+    两者一致时，结论有原文先例撑着；不一致时，以引擎为准并注明原文措辞。
+    """
+    n = norm_name(name)
+    rows = _load_rows("tuan-cases.md")
+    if rows is None:
+        return {"卦名": n, "彖辭": None, "錯誤": "未找到 references/tuan-cases.md"}
+    for r in rows:
+        if len(r) >= 6 and norm_name(r[0]) == n:
+            a = analyze(n)
+            return {
+                "卦名": n, "段號": r[2],
+                "術語": [t for t in r[3].split("、") if t and t != "—"],
+                "引擎實測": r[4],
+                "彖辭": r[5],
+                "當位數": a["當位數"], "有應數": a["有應數"],
+            }
+    return {"卦名": n, "彖辭": None, "錯誤": f"彖傳中无此卦：{name}"}
+
+
+def wenyan(name: str, line: str | None = None) -> dict:
+    """文言逐爻义理。**语料只覆盖乾、坤两卦**——《文言傳》本就只解乾坤。
+
+    其余 62 卦一律返回「語料未載」，不拿乾坤的义理去套别的卦。
+    """
+    n = norm_name(name)
+    if n not in ("乾", "坤"):
+        return {"卦名": n, "逐爻": [], "註": "語料未載：《文言傳》只解乾、坤兩卦，"
+                                              "其餘 62 卦不得援引此處義理類推"}
+    rows = _load_rows("wenyan-lines.md")
+    if rows is None:
+        return {"卦名": n, "逐爻": [], "錯誤": "未找到 references/wenyan-lines.md"}
+    out = []
+    for r in rows:
+        if len(r) >= 4 and norm_name(r[0].split("·")[0]) == n:
+            yao = r[0].split("·")[1]
+            if line and yao != line:
+                continue
+            out.append({"爻": yao, "段號": r[1], "爻辭": r[2], "義理": r[3]})
+    return {"卦名": n, "逐爻": out}
+
+
 # ---------------------------------------------------------------- 起卦
 COIN_NAMES = {6: "老陰（變）", 7: "少陽", 8: "少陰", 9: "老陽（變）"}
 
@@ -277,6 +375,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--moving", help="变爻位，逗号分隔，如 1,3")
     ap.add_argument("--cast", action="store_true")
     ap.add_argument("--seed", type=int)
+    ap.add_argument("--chain", action="store_true", help="查序卦相承：承自哪卦、承至哪卦、凭什么")
+    ap.add_argument("--tuan", action="store_true", help="查彖傳实例：原文 + 术语 + 引擎实测对照")
+    ap.add_argument("--wenyan", action="store_true", help="查文言逐爻义理（**仅乾、坤两卦有**）")
+    ap.add_argument("--line", help="配合 --wenyan 指定某一爻，如 初九 / 六二")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
 
@@ -289,6 +391,60 @@ def main(argv: list[str] | None = None) -> int:
         for i, w in enumerate(r["每爻"], 1):
             print(f"  第{i}爻：{w}")
         print(f"本卦：{r['本卦']}   變爻：{r['變爻'] or '無'}   之卦：{r['之卦']}")
+        return 0
+
+    try:
+        n0 = norm_name(a.name)
+        if n0 not in BY_NAME:
+            raise KeyError(f"未知卦名：{a.name}（请用六十四卦名，如 蒙 / 蒙卦）")
+    except KeyError as e:
+        print(f"✗ {e}", file=sys.stderr)
+        return 1
+
+    if a.chain:
+        c = chain(a.name)
+        if a.json:
+            print(json.dumps(c, ensure_ascii=False, indent=2))
+            return 0
+        if c.get("錯誤"):
+            print(f"✗ {c['錯誤']}", file=sys.stderr)
+            return 1
+        print(f"══ 序卦相承 · {c['卦名']}（第{c['卦序']}卦）══")
+        print(f"  承自：{c['承自']}")
+        print(f"    何以承自 → {c['何以承自']}")
+        print(f"  承至：{c['承至']}")
+        print(f"    何以承至 → {c['何以承至']}")
+        return 0
+
+    if a.tuan:
+        t = tuan(a.name)
+        if a.json:
+            print(json.dumps(t, ensure_ascii=False, indent=2))
+            return 0
+        if t.get("錯誤"):
+            print(f"✗ {t['錯誤']}", file=sys.stderr)
+            return 1
+        print(f"══ 彖傳 · {t['卦名']}（{t['段號']}）══")
+        print(f"  術語：{'、'.join(t['術語']) or '—'}")
+        print(f"  引擎實測：{t['引擎實測']}")
+        print(f"  彖辭：{t['彖辭']}")
+        return 0
+
+    if a.wenyan:
+        w = wenyan(a.name, a.line)
+        if a.json:
+            print(json.dumps(w, ensure_ascii=False, indent=2))
+            return 0
+        if w.get("錯誤"):
+            print(f"✗ {w['錯誤']}", file=sys.stderr)
+            return 1
+        if not w["逐爻"]:
+            print(f"══ 文言 · {w['卦名']} ══\n  {w.get('註') or '查無此爻'}")
+            return 0
+        print(f"══ 文言 · {w['卦名']} ══")
+        for y in w["逐爻"]:
+            print(f"  【{y['爻']}】（{y['段號']}）爻辭：{y['爻辭']}")
+            print(f"      義理：{y['義理']}")
         return 0
 
     moving = [int(x) for x in a.moving.split(",")] if a.moving else []
