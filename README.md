@@ -10,12 +10,12 @@
 
 ## 目录
 
-| 技能 | 一句话 | 依赖 | 引擎自检 |
-|---|---|---|---|
-| [`bazi-paipan`](skills/bazi-paipan/) | 八字四柱排盘：干支/藏干/十神/纳音/空亡/神煞/起运大运 | 无 | 41 项全绿 |
-| [`geju-yunshi`](skills/geju-yunshi/) | 已排好的盘怎么读：格局、日主强弱、大运描述性解读 | `bazi-paipan` | — |
-| [`quming-xue`](skills/quming-xue/) | 依八字喜用神取名/体检：五格/三才/生肖/平仄 | `bazi-paipan`（取八字）、`geju-yunshi`（取喜用） | 15 项全绿 |
-| [`zhouyi-yili`](skills/zhouyi-yili/) | 周易义理：观象—析爻—落行动的处境分析（**不做预测与算命**） | 无 | 97 项全绿（引擎 56 + 参考 41） |
+| 技能 | 一句话 | 依赖 | 引擎自检 | 详细介绍 |
+|---|---|---|---|---|
+| [`bazi-paipan`](skills/bazi-paipan/) | 八字四柱排盘：干支/藏干/十神/纳音/空亡/神煞/起运大运 | 无 | 41 项全绿 | [排盘 · 173,426 次比对 0 差异](skills/bazi-paipan/README.md) |
+| [`geju-yunshi`](skills/geju-yunshi/) | 已排好的盘怎么读：格局、日主强弱、大运描述性解读 | `bazi-paipan` | — | [读盘 · 只说「传统上一般关联」](skills/geju-yunshi/README.md) |
+| [`quming-xue`](skills/quming-xue/) | 依八字喜用神取名/体检：五格/三才/生肖/平仄 | `bazi-paipan`（取八字）、`geju-yunshi`（取喜用） | 15 项全绿 | [取名 · 不做「缺啥补啥」](skills/quming-xue/README.md) |
+| [`zhouyi-yili`](skills/zhouyi-yili/) | 周易义理：观象—析爻—落行动的处境分析（**不做预测与算命**） | 无 | 97 项全绿（引擎 56 + 参考 41） | [处境分析 · 不断吉凶](skills/zhouyi-yili/README.md) |
 
 > `geju-yunshi` 依赖 `bazi-paipan` 的排盘引擎 `scripts/paipan.py`。
 > 用 `./install.sh --skill geju-yunshi` 时安装器会**自动一并安装** `bazi-paipan`。

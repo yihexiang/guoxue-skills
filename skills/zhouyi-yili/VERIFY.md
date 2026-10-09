@@ -18,6 +18,30 @@ $ td.py anchor bundle/skills/zhouyi-yili.md --corpus corpus/anchored/src-*.md
 ✅ 判定 PASS：8 条引语全部锚定在声明的段号内
 ```
 
+**2026-10-09 重跑（工具升级 + 卡片引注归一后）**：
+
+```
+$ td.py anchor skills/zhouyi-yili/SKILL.md --corpus corpus/anchored/src-*.md
+引语 27 条：锚定命中 16，未标注段号 11
+判定明细：{'ANCHOR_HIT': 16, 'UNANCHORED': 11}
+对账：{'seen': 27, 'anchor_hit': 16, 'unanchored': 11, 'anchor_partial': 0,
+       'span_hit': 0, 'anchor_miss': 0, 'not_in_corpus': 0, 'too_short': 0}
+抽取：候选 63 = 认出 27 + 噪声 4 + 中文太短跳过 32（自检 True）
+✅ 判定 PASS：16 条带段号标注的引语全部锚定在声明的段号内；
+   另有 11 条无 §N 标注、不可定位（未核验）
+```
+
+数字从 8 变 27 有两个原因，都不是"卡片变好了"：
+1. **工具的引语长度门槛原本按英文尺度设计**（`len(q) < 12`）——把「天行健，君子以自強不息」(11 字)
+   这类中文经典引语整类丢掉，还计入噪声。修好后 8~11 字的引语重新进入核验
+   （该缺陷已登记为 rulai-distill 缺陷 #61）。
+2. **卡片有一处引注写成「說卦 §2」而非 `src-03 §2`**，核验时按默认来源落到 src-01，
+   于是「天地定位／帝出乎震」被判与声明段号不符。已归一为 `src-03 §2` / `src-03 §4`。
+
+`UNANCHORED`（无 §N 标注）**不计入失败**（与 verify-quotes / lint-quotes「无出处即跳过」同口径），
+但如实计数并逐条列出；其中 10 条**逐字见于语料**（如「一陰一陽之謂道」在 src-01 §10），
+工具会提示补 §N 后可纳入核验。
+
 ## 3 · 引擎自检（随技能发布）
 
 ```
